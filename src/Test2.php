@@ -2,7 +2,7 @@
 
 $server = socket_create(AF_INET, SOCK_STREAM, 0) or die("Could not create socket\n");
 
-$port = 32605;
+$port = 32835;
 
 socket_connect($server, "127.0.0.1", $port);
 
@@ -30,5 +30,18 @@ if($command == 1 || $command == 2 ||$command == 3 || $command == 4 )
 	$command = socket_read($server2, 20);
 
 	echo $command;
+
+	socket_close($server2);
+}
+else
+{
+	sleep (2);
+
+	socket_write($server, "Now", 100);
+
+	$command = socket_read($server, 20);
+
+	echo $command;
 }
 
+socket_close($server);

@@ -4,7 +4,7 @@ include 'Messages/Message.php';
 
 $x = array();
 for ($a =0 ;$a<5;$a++)
-	$x[] = new NodeProperties($a, "127.0.0.1", 32600 + $a);
+	$x[] = new NodeProperties($a, "127.0.0.1", 32830 + $a);
 
 function errHandle($errNo, $errStr, $errFile, $errLine) { 
     $msg = "$errStr in $errFile on line $errLine";

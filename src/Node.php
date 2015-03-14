@@ -115,7 +115,7 @@ class Node
 				socket_set_nonblock($this->clientSocket);
 
 				$command = socket_read($this->clientSocket, 100);
-			
+
 
 				if(strlen($command)!=0)
 				{
