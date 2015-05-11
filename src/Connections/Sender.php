@@ -46,9 +46,15 @@ class Sender
 
 		$str = json_encode($Message)."#";
 		foreach($this->clients as $client)
-		{
 			socket_write($client, $str, strlen ($str));
-		}
+	}
+
+	public function CloseConnections()
+	{
+		foreach($this->clients as $client)
+			socket_close($client);
+		socket_close($socket);
+
 	}
 		
 }

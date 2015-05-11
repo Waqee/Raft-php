@@ -4,7 +4,7 @@ include 'Messages/Message.php';
 
 $x = array();
 for ($a =0 ;$a<5;$a++)
-	$x[] = new NodeProperties($a, "127.0.0.1", 32830 + $a);
+	$x[] = new NodeProperties($a, "127.0.0.1", 34300 + $a);
 
 function errHandle($errNo, $errStr, $errFile, $errLine) { 
     $msg = "$errStr in $errFile on line $errLine";
@@ -19,6 +19,7 @@ for ($i = 0; $i < 5; ++$i) {
         $pid = pcntl_fork();
 
         if (!$pid) {
+
             $b = new NodeList;
             foreach ($x as $key => $value) {
             	if($key!=$i)
@@ -26,6 +27,7 @@ for ($i = 0; $i < 5; ++$i) {
             }
             $c = new Node($x[$i], $b);
             $c->NodeStart();
+            exit($i);
         }
     }
 

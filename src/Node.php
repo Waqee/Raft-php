@@ -48,6 +48,14 @@ class Node
 
 	public $leader;
 
+	public $close;
+
+	public $exiting;
+
+	public $exit_time;
+
+	public $log_writer;
+
 
     public function __construct($MyProperties, $NodeList)
     {
@@ -68,12 +76,15 @@ class Node
 		$this->timeoutinterval = 0.15;
 		$this->heartbeatinterval = 0.075;
 		$this->LeaderId = null;
+		$this->close = false;
 		set_time_limit(0);
 		$this->socket = socket_create(AF_INET, SOCK_STREAM, 0) or die("Could not create socket\n");
 		socket_bind($this->socket, $MyProperties->ServerAddr, $MyProperties->PortNo+5);
 		socket_listen($this->socket);
 		$this->clientSocket = false;
 		socket_set_nonblock($this->socket);
+		$this->exiting = false;
+		$this->exitcount = 0;
     }
 	
 	public function NodeStart()
@@ -93,12 +104,13 @@ class Node
 		echo "A";
 		$this->timeout = microtime(true) + $this->timeoutinterval + (mt_rand(0,150)/1000); 
 		$this->NodeRunning();
+		$this->NodeClose();
 	}
 
 	public function NodeRunning()
 	{
 		while(true)
-		{
+		{			
 			// echo "Log : ";
 
 			// foreach ($this->log as $key => $value) {
@@ -122,11 +134,21 @@ class Node
 					echo "$this->state Command $command";
 					if($this->state == "Leader")
 					{
-						$this->lastLogIndex += 1;
-						$this->log[$this->lastLogIndex] = new Log($this->currentTerm, $command);
+						if($command == "Sleep")
+							sleep(5);
+						else
+						{
+							$this->lastLogIndex += 1;
+							$this->log[$this->lastLogIndex] = new Log($this->currentTerm, $command);
+							$this->WriteLog();
+						}
 					}
 					else
+					{
 						socket_write($this->clientSocket, $this->LeaderId, 20);
+						socket_close($this->clientSocket);
+						$this->clientSocket = false;
+					}
 				}
 			}
 
@@ -139,10 +161,16 @@ class Node
 
 			$Messages = $this->Reciever->TryRecieve();
 
-			if(count($Messages)!=0)
-				echo "Messages : ".count($Messages)."\n";
+			//if(count($Messages)!=0)
+			//	echo "Messages : ".count($Messages)."\n";
+
+			if($this->exiting == true && time()> $this->exit_time + 5)
+			{
+					return;
+			}
 
 			foreach ($Messages as $key => $value) {
+				$this->WriteLog();
 				if($value->Type == "RequestVote")
 				{
 					echo "ID ".$this->MyProperties->Id." $this->state RequestVote \n";
@@ -204,8 +232,14 @@ class Node
 							$this->votedFor = $value->AppendEntries->LeaderId;
 						}
 						$this->timeout = microtime(true) + $this->timeoutinterval + (mt_rand(0,150)/1000); 
+						$contains = false;
+
+						
 						$Message = new Message("EntryResult",new EntryResult($this->currentTerm,"True", $this->MyProperties->Id));
 						$this->Sender->SendMessage($value->AppendEntries->LeaderId, $Message);
+
+						if($this->state != "Follower")
+							echo "WTF";
 
 						$delentries = false;
 
@@ -258,14 +292,30 @@ class Node
 						$this->matchIndex[$value->EntryResult->id] = $this->lastLogIndex;
 					}
 				}
-				
-			}
 
-			if($this->commitIndex > $this->lastApplied)
+				if($this->commitIndex > $this->lastApplied)
 			{
 				$this->lastApplied+=1;
 				if($this->state == "Leader")
-					socket_write($this->clientSocket, "Done ".$this->log[$this->lastApplied]->command , 20);
+					socket_write($this->clientSocket, $this->log[$this->lastApplied]->command , 20);
+
+				if($this->log[$this->lastApplied]->command == "Exit")
+				{
+					if($this->state == "Leader")
+					{
+						$this->exiting = true;
+						$this->exit_time = time();
+					}
+					else
+						return;
+				}
+				else if($this->log[$this->lastApplied]->command == "Quit")
+				{
+					socket_close($this->clientSocket);
+					$this->clientSocket = false;
+				}
+				$this->WriteLog();
+
 				echo "ID ".$this->MyProperties->Id." $this->state Applied ".$this->lastApplied." Term : ".$this->log[$this->lastApplied]->term." Command ".$this->log[$this->lastApplied]->command."\n";
 			}
 
@@ -302,7 +352,7 @@ class Node
 			else if($this->state == "Leader")
 			{			
 				$min = min($this->matchIndex);
-				if( $min > 0 && $min > $this->commitIndex)
+				if( $min > 0 && $min > $this->commitIndex && $this->log[$min]->term == $this->currentTerm)
 					$this->commitIndex = $min;
 				foreach ($this->nextIndex as $id => $index) {
 					
@@ -321,10 +371,114 @@ class Node
 						
 				}
 			}
+				
+			}
+
+			if(count($Messages)==0)
+			{
+				if($this->commitIndex > $this->lastApplied)
+			{
+				$this->lastApplied+=1;
+				if($this->state == "Leader")
+					socket_write($this->clientSocket, $this->log[$this->lastApplied]->command , 20);
+
+				if($this->log[$this->lastApplied]->command == "Exit")
+				{
+					if($this->state == "Leader")
+					{
+						$this->exiting = true;
+						$this->exit_time = time();
+					}
+					else
+						return;
+				}
+				else if($this->log[$this->lastApplied]->command == "Quit")
+				{
+					socket_close($this->clientSocket);
+					$this->clientSocket = false;
+				}
+				$this->WriteLog();
+
+				echo "ID ".$this->MyProperties->Id." $this->state Applied ".$this->lastApplied." Term : ".$this->log[$this->lastApplied]->term." Command ".$this->log[$this->lastApplied]->command."\n";
+			}
+
+			if($this->state == "Candidate" && $this->votes > (count($this->NodeList)+1)/2)
+			{
+				echo "ID ".$this->MyProperties->Id." $this->state Won Election \n";
+				$this->state = "Leader";
+				$Message = new Message("AppendEntries", new AppendEntries($this->currentTerm,$this->MyProperties->Id, $this->lastLogIndex, $this->lastLogIndex>0?$this->log[$this->lastLogIndex]->term:null, null, $this->commitIndex));
+				$this->Sender->BroadCastMessage($Message);
+				$this->heartbeat = array(); 
+				foreach ($this->NodeList->Nodes as $index => $iNode)
+					$this->heartbeat[$iNode->Id] = microtime(true) + $this->heartbeatinterval;
+
+				$this->leader = microtime(true);
+			}
+			else if($this->state!="Leader" && microtime(true)>=$this->timeout)
+			{
+				echo "ID ".$this->MyProperties->Id." $this->state Started Election \n";
+				$this->state = "Candidate";
+				$this->currentTerm+=1;
+				$this->votes = 1;
+				$this->votedFor = $this->MyProperties->Id;
+				$Message = new Message("RequestVote", new RequestVote($this->currentTerm,$this->MyProperties->Id, $this->lastLogIndex, $this->lastLogIndex>0?$this->log[$this->lastLogIndex]->term:null));
+				$this->Sender->BroadCastMessage($Message);
+				$this->timeout = microtime(true) + $this->timeoutinterval + (mt_rand(0,150)/1000);
+				$this->nextIndex = array(); 
+				$this->matchIndex = array();
+				foreach ($this->NodeList->Nodes as $index => $iNode)
+				{
+					$this->nextIndex[$iNode->Id] = $this->lastLogIndex;
+					$this->matchIndex[$iNode->Id] = 0;
+				}
+			}
+			else if($this->state == "Leader")
+			{			
+				$min = min($this->matchIndex);
+				if( $min > 0 && $min > $this->commitIndex && $this->log[$min]->term == $this->currentTerm)
+					$this->commitIndex = $min;
+				foreach ($this->nextIndex as $id => $index) {
+					
+					if(microtime(true)>=$this->heartbeat[$id])
+					{
+						echo "ID ".$this->MyProperties->Id." $this->state HeartBeat to $id \n";
+						$entries = array();
+						for($i = $index+1; $i<=$this->lastLogIndex; $i+=1)
+							$entries[]=$this->log[$i];
+						if(count($entries)!=0)
+							echo "Try\n";
+						$Message = new Message("AppendEntries", new AppendEntries($this->currentTerm,$this->MyProperties->Id, $index, $index>0?$this->log[$index]->term:null, $entries, $this->commitIndex));
+						$this->Sender->SendMessage($id, $Message);
+						$this->heartbeat[$id] = microtime(true) + $this->heartbeatinterval;
+					}
+						
+				}
+			}
+			}
+
+			
 
 
 		}
 	}
 
+	public function WriteLog()
+	{
+		$file = "log".$this->MyProperties->Id;
+		$content = "\n".$this->commitIndex." ".$this->lastApplied." ".$this->lastLogIndex." ".$this->MyProperties->Id."     ";
+		foreach ($this->log as $id => $index)
+			$content = $content.$index->command." ";
+		$content = $content."\n";
+		echo($content);
+	}
+
+	public function NodeClose()
+	{
+		$this->Sender->CloseConnections();
+		$this->Reciever->CloseConnections();
+		socket_close($this->clientSocket);
+		socket_close($this->socket);
+		//echo "AS".$this->MyProperties->Id;
+	}
 
 }

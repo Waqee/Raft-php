@@ -62,4 +62,10 @@ class Reciever
 		}
 		return $Messages;
 	}
+
+	public function CloseConnections()
+	{
+		foreach($this->servers as $server)
+			socket_close($server);
+	}
 }
