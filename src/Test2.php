@@ -1,8 +1,9 @@
 <?php
 
 $server = socket_create(AF_INET, SOCK_STREAM, 0) or die("Could not create socket\n");
+socket_set_nonblock($server);
 
-$port = 34305;
+$port = 35165;
 
 socket_connect($server, "127.0.0.1", $port);
 
@@ -10,29 +11,33 @@ while(true)
 {
 	$command = fgets(STDIN);
 
+	
 	if($command == "con\n")
 	{
 		socket_close($server);
 		$server = socket_create(AF_INET, SOCK_STREAM, 0) or die("Could not create socket\n");
-
+		socket_set_nonblock($server);
 		$command = fgets(STDIN);
 		$newport = (int)$port + (int)$command;
 		socket_connect($server, "127.0.0.1", $newport);
 	}
 	else
 	{
-
-		socket_write($server, rtrim($command, "\n"), 100);
+		if($command != "\n")
+			socket_write($server, rtrim($command, "\n"), 100);
 		if(rtrim($command, "\n") == "Sleep")
 			continue;
 		$res = socket_read($server, 20);
 
-		echo $res."\n";
+		if (strlen($res)!=0) {
+		
+			echo $res."\n";
 
-		if($res == "Quit")
-		{
-			socket_close($server);
-			break;
+			if($res == "Quit" || $res == "Exit")
+			{
+				socket_close($server);
+				break;
+			}
 		}
 	}
 }
