@@ -20,7 +20,7 @@ class Sender
 	public function AcceptConnection($MyProperties, $no)
 	{
 		$time_pre = microtime(true);
-		$timer = (mt_rand(1,2)==1)?1/1000:0;
+		$timer = (mt_rand(0,3)==0)?1/100:0;
 		while(microtime(true)-$time_pre<$timer)
 		{
 			if(($newc = socket_accept($this->socket)) !== false)
@@ -52,8 +52,17 @@ class Sender
 	public function CloseConnections()
 	{
 		foreach($this->clients as $client)
+		{
+			$arrOpt = array('l_onoff' => 1, 'l_linger' => 1);
+		    socket_set_block($client);
+		    socket_set_option($client, SOL_SOCKET, SO_LINGER, $arrOpt);
 			socket_close($client);
-		socket_close($socket);
+		}
+		$arrOpt = array('l_onoff' => 1, 'l_linger' => 1);
+	    socket_set_block($this->socket);
+	    socket_set_option($this->socket, SOL_SOCKET, SO_LINGER, $arrOpt);
+    
+		socket_close($this->socket);
 
 	}
 		

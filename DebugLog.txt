@@ -1,0 +1,96 @@
+00134012402341234 has connected to Server 1 1
+2 has connected to Server 1 1
+12343 has connected to Server 1 1
+1 B
+Client 4 has connected to 1
+1 B
+Client 2 has connected to 1
+1 B
+Client 3 has connected to 1
+0 has connected to Server 1 1
+1 B
+Client 0 has connected to 1
+1 has connected to Server 2 1
+1 has connected to Server 0 2
+1 has connected to Server 4 3
+1 has connected to Server 3 4
+AID 1 Follower Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 
+ID 1 Candidate Started Election 

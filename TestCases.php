@@ -12,6 +12,9 @@ function TestCase1()
 
 	tryCommand("Hello");
 
+	sleep(1);
+
+	CloseAll(5);
 
 	TestResult(5);
 
@@ -36,6 +39,9 @@ function TestCase2()
 
 	tryCommand("Are");
 
+	sleep(1);
+
+	CloseAll(5);
 
 	TestResult(5);
 
@@ -60,6 +66,9 @@ function TestCase3()
 
 	tryCommand("Good");
 
+	sleep(1);
+
+	CloseAll(5);
 
 	TestResult(5);
 
@@ -88,6 +97,9 @@ function TestCase4()
 
 	tryCommand("Good");
 
+	sleep(1);
+
+	CloseAll(5);
 
 	TestResult(5);
 
@@ -136,20 +148,18 @@ function TestCase5()
 
 	tryCommand("Today");
 
+	sleep(1);
+
+	CloseAll(5);
 
 	TestResult(5);
 
 	$port += 5;
 }
-
 TestCase1();
-sleep(5);
 TestCase2();
-sleep(5);
 TestCase3();
-sleep(5);
 TestCase4();
-sleep(5);
 TestCase5();
 
 ?>

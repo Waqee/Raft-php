@@ -147,6 +147,9 @@ class Node
 					}
 					else if($command == "closesock")
 					{
+						$arrOpt = array('l_onoff' => 1, 'l_linger' => 1);
+					    socket_set_block($this->clientSocket);
+					    socket_set_option($this->clientSocket, SOL_SOCKET, SO_LINGER, $arrOpt);
 						socket_close($this->clientSocket);
 						$this->clientSocket = false;
 					}
@@ -162,8 +165,6 @@ class Node
 					{
 						echo "Leaader ".$this->MyProperties->Id."\n";
 						socket_write($this->clientSocket, $this->LeaderId, 20);
-						socket_close($this->clientSocket);
-						$this->clientSocket = false;
 					}
 				}
 			}
@@ -338,11 +339,6 @@ class Node
 				if($this->state == "Leader")
 					socket_write($this->clientSocket, $this->log[$this->lastApplied]->command , 20);
 
-				else if($this->log[$this->lastApplied]->command == "Quit")
-				{
-					socket_close($this->clientSocket);
-					$this->clientSocket = false;
-				}
 				$this->WriteLog();
 
 				//echo "ID ".$this->MyProperties->Id." $this->state Applied ".$this->lastApplied." Term : ".$this->log[$this->lastApplied]->term." Command ".$this->log[$this->lastApplied]->command."\n";
@@ -433,11 +429,7 @@ class Node
 					socket_write($this->clientSocket, $this->log[$this->lastApplied]->command , 20);
 
 				
-				if($this->log[$this->lastApplied]->command == "Quit")
-				{
-					socket_close($this->clientSocket);
-					$this->clientSocket = false;
-				}
+			
 				$this->WriteLog();
 
 				//echo "ID ".$this->MyProperties->Id." $this->state Applied ".$this->lastApplied." Term : ".$this->log[$this->lastApplied]->term." Command ".$this->log[$this->lastApplied]->command."\n";
@@ -546,7 +538,14 @@ class Node
 
 	public function NodeClose()
 	{
+		$arrOpt = array('l_onoff' => 1, 'l_linger' => 1);
+	    socket_set_block($this->clientSocket);
+	    socket_set_option($this->clientSocket, SOL_SOCKET, SO_LINGER, $arrOpt);
 		socket_close($this->clientSocket);
+		$this->clientSocket = false;
+		$arrOpt = array('l_onoff' => 1, 'l_linger' => 1);
+	    socket_set_block($this->socket);
+	    socket_set_option($this->socket, SOL_SOCKET, SO_LINGER, $arrOpt);
 		socket_close($this->socket);
 		$this->Reciever->CloseConnections();
 		$this->Sender->CloseConnections();

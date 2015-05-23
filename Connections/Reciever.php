@@ -66,6 +66,11 @@ class Reciever
 	public function CloseConnections()
 	{
 		foreach($this->servers as $server)
+		{
+			$arrOpt = array('l_onoff' => 1, 'l_linger' => 1);
+		    socket_set_block($server);
+		    socket_set_option($server, SOL_SOCKET, SO_LINGER, $arrOpt);
 			socket_close($server);
+		}
 	}
 }

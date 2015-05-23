@@ -15,7 +15,10 @@ function setupTest($no)
 	global $pid;
 	$pid = pcntl_fork();
 	if (!$pid) 
-		shell_exec("php NodeStart.php $no $port > a");
+	{
+		shell_exec("php NodeStart.php $no $port > DebugLog.txt");
+		exit(0);
+	}
 
 	sleep(2);
 
@@ -28,12 +31,15 @@ function connectNode($no)
 	global $port;
 	socket_write($server, "closesock", 100);
 	echo "Connecting to Node $no\n";
-
+	$arrOpt = array('l_onoff' => 1, 'l_linger' => 1);
+    socket_set_block($server);
+    socket_set_option($server, SOL_SOCKET, SO_LINGER, $arrOpt);
 	socket_close($server);
 	$server = socket_create(AF_INET, SOCK_STREAM, 0) or die("Could not create socket\n");
 	socket_set_nonblock($server);
 	$newport = (int)$port + (int)$no;
-	socket_connect($server, "127.0.0.1", $newport);
+	while(socket_connect($server, "127.0.0.1", $newport)==false)
+		;
 }
 
 function tryCommand($command)
@@ -47,6 +53,9 @@ function tryCommand($command)
 		return;
 	else if($command == "quit")
 	{
+		$arrOpt = array('l_onoff' => 1, 'l_linger' => 1);
+	    socket_set_block($server);
+	    socket_set_option($server, SOL_SOCKET, SO_LINGER, $arrOpt);
 		socket_close($server);
 		return;
 	}
@@ -78,6 +87,32 @@ function tryCommand($command)
 	}
 }
 
+function CloseAll($no)
+{
+	global $server;
+	global $port;
+
+	socket_write($server, "closesock", 100);
+	$arrOpt = array('l_onoff' => 1, 'l_linger' => 1);
+    socket_set_block($server);
+    socket_set_option($server, SOL_SOCKET, SO_LINGER, $arrOpt);
+	socket_close($server);
+	for($i = 0; $i<$no; $i+=1)
+	{
+		$server = socket_create(AF_INET, SOCK_STREAM, 0) or die("Could not create socket\n");
+		$newport = (int)$port + (int)$i;
+		if(socket_connect($server, "127.0.0.1", $newport)==true)
+		{
+			socket_write($server, "quit", 100);
+		}
+			$arrOpt = array('l_onoff' => 1, 'l_linger' => 1);
+		    socket_set_block($server);
+		    socket_set_option($server, SOL_SOCKET, SO_LINGER, $arrOpt);
+			socket_close($server);
+		
+	}
+}
+
 
 function killProcessAndChilds($pid,$signal) {
         exec("ps -ef| awk '\$3 == '$pid' { print  \$2 }'", $output, $ret);
@@ -99,7 +134,6 @@ function TestResult($no)
 	$results = array();
 
 	sleep(3);
-	socket_close($server);
 	killProcessAndChilds($pid,9);
 	sleep(1);
 
