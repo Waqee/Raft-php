@@ -8,10 +8,13 @@ class EntryResult
 
 	public $id;
 
-	public function __construct($Term, $Success, $id)
+	public $index;
+
+	public function __construct($Term, $Success, $id, $index)
 	{
 		$this->Term = $Term;
 		$this->Success = $Success;
 		$this->id = $id;
+		$this->index = $index;
 	}
 }

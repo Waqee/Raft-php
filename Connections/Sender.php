@@ -17,10 +17,10 @@ class Sender
 		$this->client = array();
 	}
 
-	public function AcceptConnection($MyProperties)
+	public function AcceptConnection($MyProperties, $no)
 	{
 		$time_pre = microtime(true);
-		$timer = mt_rand(0,1)/100;
+		$timer = (mt_rand(1,2)==1)?1/1000:0;
 		while(microtime(true)-$time_pre<$timer)
 		{
 			if(($newc = socket_accept($this->socket)) !== false)

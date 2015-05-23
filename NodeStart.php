@@ -2,9 +2,11 @@
 include 'Node.php';
 include 'Messages/Message.php';
 
+error_reporting(E_ERROR | E_PARSE);
+
 $x = array();
-for ($a =0 ;$a<5;$a++)
-	$x[] = new NodeProperties($a, "127.0.0.1", 35160 + $a);
+for ($a =0 ;$a<$argv[1];$a++)
+	$x[] = new NodeProperties($a, "127.0.0.1", (int)$argv[2] + $a);
 
 function errHandle($errNo, $errStr, $errFile, $errLine) { 
     $msg = "$errStr in $errFile on line $errLine";
@@ -15,7 +17,7 @@ function errHandle($errNo, $errStr, $errFile, $errLine) {
     }
 }
 
-for ($i = 0; $i < 5; ++$i) {
+for ($i = 0; $i < $argv[1]; ++$i) {
         $pid = pcntl_fork();
 
         if (!$pid) {

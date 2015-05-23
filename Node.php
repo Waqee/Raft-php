@@ -79,7 +79,7 @@ class Node
 		$this->close = false;
 		set_time_limit(0);
 		$this->socket = socket_create(AF_INET, SOCK_STREAM, 0) or die("Could not create socket\n");
-		socket_bind($this->socket, $MyProperties->ServerAddr, $MyProperties->PortNo+5);
+		socket_bind($this->socket, $MyProperties->ServerAddr, $MyProperties->PortNo+count($NodeList->Nodes)+1);
 		socket_listen($this->socket);
 		$this->clientSocket = false;
 		socket_set_nonblock($this->socket);
@@ -89,13 +89,19 @@ class Node
 	
 	public function NodeStart()
 	{
+		mkdir("./Node ".$this->MyProperties->Id);
+		$myFile = "Node ".$this->MyProperties->Id."/Debug.txt";
+		$fh = fopen($myFile, 'w');
+		$content = "Time\tCommitID\tLogID\tNodeID\tLogs";
+		fwrite($fh, $content);
+		fclose($fh);
 		$this->state = "Follower";
 		$x = 0;
 		$y = 0; 
 		while(count($this->NodeList->Nodes) != $x || count($this->NodeList->Nodes) != $y)
 		{
 			if(count($this->NodeList->Nodes) != $x)
-				$x = $this->Sender->AcceptConnection($this->MyProperties);
+				$x = $this->Sender->AcceptConnection($this->MyProperties, count($this->NodeList->Nodes));
 
 			if(count($this->NodeList->Nodes) != $y)
 				$y = $this->Reciever->TryConnections($this->MyProperties, $this->NodeList);
@@ -132,24 +138,29 @@ class Node
 				if(strlen($command)!=0)
 				{
 					echo "$this->state Command $command";
-					if($this->state == "Leader")
-					{
-						if($command == "Sleep")
+					if($command == "Sleep")
 							sleep(5);
-						if($command == "quit")
-						{
-							echo "Quited";
-							return;
-						}
-						else
-						{
+					else if($command == "quit")
+					{
+						echo "Quited";
+						return;
+					}
+					else if($command == "closesock")
+					{
+						socket_close($this->clientSocket);
+						$this->clientSocket = false;
+					}
+					else if($this->state == "Leader")
+					{
+						
 							$this->lastLogIndex += 1;
 							$this->log[$this->lastLogIndex] = new Log($this->currentTerm, $command);
 							$this->WriteLog();
-						}
+						
 					}
 					else
 					{
+						echo "Leaader ".$this->MyProperties->Id."\n";
 						socket_write($this->clientSocket, $this->LeaderId, 20);
 						socket_close($this->clientSocket);
 						$this->clientSocket = false;
@@ -169,24 +180,33 @@ class Node
 			//if(count($Messages)!=0)
 			//	echo "Messages : ".count($Messages)."\n";
 
-			if($this->exiting == true && time()> $this->exit_time + 5)
-			{
-					return;
-			}
+			
 
 			foreach ($Messages as $key => $value) {
 				//$this->WriteLog();
+				
 				$drop = rand(0,30);
-
 				if($drop==0)
 					continue;
+
 				if($value->Type == "RequestVote")
 				{
-					//echo "ID ".$this->MyProperties->Id." $this->state RequestVote \n";
+					echo "ID ".$this->lastLogIndex." ".$value->RequestVote->LastLogIndex." ".$this->MyProperties->Id." $this->state RequestVote \n";
 					if($value->RequestVote->Term<=$this->currentTerm)
 					{
+						echo "false";
 						$Message = new Message("ResponseVote",new ResponseVote($this->currentTerm,"False"));
 						$this->Sender->SendMessage($value->RequestVote->CandidateId, $Message);
+						
+					}
+					else if( $this->lastLogIndex > $value->RequestVote->LastLogIndex || ($this->lastLogIndex>0 &&$this->log[$this->lastLogIndex]->term != $value->RequestVote->LastLogTerm))
+					{
+						echo "changed to follower ".$value->RequestVote->CandidateId." false";
+						$Message = new Message("ResponseVote",new ResponseVote($this->currentTerm,"False"));
+						$this->Sender->SendMessage($value->RequestVote->CandidateId, $Message);
+						$this->State = "Follower";
+						$this->currentTerm = $value->RequestVote->Term;
+						$this->timeout = microtime(true) + $this->timeoutinterval + (mt_rand(0,150)/1000); 
 					}
 					else
 					{
@@ -216,25 +236,25 @@ class Node
 					//echo "ID ".$this->MyProperties->Id." $this->state AppendEntries \n";
 					if($value->AppendEntries->Term<$this->currentTerm)
 					{
-						$Message = new Message("EntryResult",new EntryResult($this->currentTerm,"False", $this->MyProperties->Id));
+						$Message = new Message("EntryResult",new EntryResult($this->currentTerm,"False", $this->MyProperties->Id,$this->lastLogIndex));
 						$this->Sender->SendMessage($value->AppendEntries->LeaderId, $Message);
 					}
 					else if($value->AppendEntries->PrevLogIndex!=0 && !array_key_exists($value->AppendEntries->PrevLogIndex,$this->log))
 					{
-						$Message = new Message("EntryResult",new EntryResult($this->currentTerm,"False", $this->MyProperties->Id));
+						$Message = new Message("EntryResult",new EntryResult($this->currentTerm,"False", $this->MyProperties->Id,$this->lastLogIndex));
 						$this->Sender->SendMessage($value->AppendEntries->LeaderId, $Message);
 						$this->LeaderId = $value->AppendEntries->LeaderId;
 					}
 					else if($value->AppendEntries->PrevLogIndex!=0 && array_key_exists($value->AppendEntries->PrevLogIndex,$this->log) && $this->log[$value->AppendEntries->PrevLogIndex]->term != $value->AppendEntries->PrevLogTerm)
 					{
-						$Message = new Message("EntryResult",new EntryResult($this->currentTerm,"False", $this->MyProperties->Id));
+						$Message = new Message("EntryResult",new EntryResult($this->currentTerm,"False", $this->MyProperties->Id,$this->lastLogIndex));
 						$this->Sender->SendMessage($value->AppendEntries->LeaderId, $Message);
 						$this->LeaderId = $value->AppendEntries->LeaderId;
 					}
 					else
 					{
 						$this->LeaderId = $value->AppendEntries->LeaderId;
-						if($value->AppendEntries->Term > $this->currentTerm)
+						if($value->AppendEntries->Term >= $this->currentTerm)
 						{
 							$this->state = "Follower";
 							$this->currentTerm = $value->AppendEntries->Term;
@@ -243,21 +263,22 @@ class Node
 						$this->timeout = microtime(true) + $this->timeoutinterval + (mt_rand(0,150)/1000); 
 						$contains = false;
 
-						
-						$Message = new Message("EntryResult",new EntryResult($this->currentTerm,"True", $this->MyProperties->Id));
-						$this->Sender->SendMessage($value->AppendEntries->LeaderId, $Message);
 
 						if($this->state != "Follower")
 							echo "WTF";
 
 						$delentries = false;
 
-						for ($i=$value->AppendEntries->PrevLogIndex+1, $j=0;;$i+=1,$j+=1)
+						$j=0;
+
+						for ($i=$value->AppendEntries->PrevLogIndex+1;;$i+=1)
 						{
 							if($delentries)
 							{
 								if(isset($this->log[$i]))
+								{
 									unset($this->log[$i]);
+								}
 								else
 									break;
 							}
@@ -269,10 +290,17 @@ class Node
 									unset($this->log[$i]);
 							}
 							else
+							{
 								$this->log[$i] = $value->AppendEntries->Entries[$j];
+								$j+=1;
+							}
 						}
 
-						$this->WriteLog();
+						$Message = new Message("EntryResult",new EntryResult($this->currentTerm,"True", $this->MyProperties->Id,$this->lastLogIndex));
+						$this->Sender->SendMessage($value->AppendEntries->LeaderId, $Message);
+
+						if($j==0)
+							$this->WriteLog();
 
 						if($value->AppendEntries->LeaderCommit > $this->commitIndex)
 						{
@@ -299,8 +327,8 @@ class Node
 					}
 					else if($value->EntryResult->Success == "True")
 					{
-						$this->nextIndex[$value->EntryResult->id] = $this->lastLogIndex;
-						$this->matchIndex[$value->EntryResult->id] = $this->lastLogIndex;
+						$this->nextIndex[$value->EntryResult->id] = $value->EntryResult->index;
+						$this->matchIndex[$value->EntryResult->id] = $value->EntryResult->index;
 					}
 				}
 
@@ -310,12 +338,6 @@ class Node
 				if($this->state == "Leader")
 					socket_write($this->clientSocket, $this->log[$this->lastApplied]->command , 20);
 
-				if($this->log[$this->lastApplied]->command == "Exit")
-				{
-					if($this->state == "Leader")
-						return;
-						
-				}
 				else if($this->log[$this->lastApplied]->command == "Quit")
 				{
 					socket_close($this->clientSocket);
@@ -326,7 +348,7 @@ class Node
 				//echo "ID ".$this->MyProperties->Id." $this->state Applied ".$this->lastApplied." Term : ".$this->log[$this->lastApplied]->term." Command ".$this->log[$this->lastApplied]->command."\n";
 			}
 
-			if($this->state == "Candidate" && $this->votes > (count($this->NodeList)+1)/2)
+			if($this->state == "Candidate" && $this->votes >= (int)(count($this->NodeList)+1)/2)
 			{
 				echo "ID ".$this->MyProperties->Id." $this->state Won Election \n";
 				$this->state = "Leader";
@@ -334,7 +356,7 @@ class Node
 				$this->Sender->BroadCastMessage($Message);
 				$this->heartbeat = array(); 
 				foreach ($this->NodeList->Nodes as $index => $iNode)
-					$this->heartbeat[$iNode->Id] = microtime(true) + $this->heartbeatinterval;
+					$this->heartbeat[$iNode->Id] = microtime(true);
 
 				$this->leader = microtime(true);
 			}
@@ -343,7 +365,7 @@ class Node
 				echo "ID ".$this->MyProperties->Id." $this->state Started Election \n";
 				$this->state = "Candidate";
 				$this->currentTerm+=1;
-				$this->votes = 1;
+				$this->votes = 0;
 				$this->votedFor = $this->MyProperties->Id;
 				$Message = new Message("RequestVote", new RequestVote($this->currentTerm,$this->MyProperties->Id, $this->lastLogIndex, $this->lastLogIndex>0?$this->log[$this->lastLogIndex]->term:null));
 				$this->Sender->BroadCastMessage($Message);
@@ -358,6 +380,7 @@ class Node
 			}
 			else if($this->state == "Leader")
 			{			
+				$ids = array();
 				for($i = max($this->matchIndex); $i>$this->commitIndex; $i-=1)
 				{
 					if( $this->log[$i]->term != $this->currentTerm)
@@ -365,10 +388,18 @@ class Node
 					$matchcount = 0;
 					foreach ($this->matchIndex as $key => $value) {
 						if( $value == $i)
+						{
 							$matchcount+=1;
+							$ids[$key] = true;
+						}
 					}
 					if($matchcount >= (int)((count($this->NodeList->Nodes)+1)/2))
 					{
+						echo "match count ";
+						foreach ($ids as $key => $value) {
+							echo $key;
+						}
+						echo "\n";
 						$this->commitIndex = $i;
 						break;
 					}
@@ -401,12 +432,8 @@ class Node
 				if($this->state == "Leader")
 					socket_write($this->clientSocket, $this->log[$this->lastApplied]->command , 20);
 
-				if($this->log[$this->lastApplied]->command == "Exit")
-				{
-					if($this->state == "Leader")
-						return;
-				}
-				else if($this->log[$this->lastApplied]->command == "Quit")
+				
+				if($this->log[$this->lastApplied]->command == "Quit")
 				{
 					socket_close($this->clientSocket);
 					$this->clientSocket = false;
@@ -416,24 +443,24 @@ class Node
 				//echo "ID ".$this->MyProperties->Id." $this->state Applied ".$this->lastApplied." Term : ".$this->log[$this->lastApplied]->term." Command ".$this->log[$this->lastApplied]->command."\n";
 			}
 
-			if($this->state == "Candidate" && $this->votes > (count($this->NodeList)+1)/2)
+			if($this->state == "Candidate" && $this->votes >= (int)(count($this->NodeList)+1)/2)
 			{
-				//echo "ID ".$this->MyProperties->Id." $this->state Won Election \n";
+				echo "ID ".$this->MyProperties->Id." $this->state Won Election \n";
 				$this->state = "Leader";
 				$Message = new Message("AppendEntries", new AppendEntries($this->currentTerm,$this->MyProperties->Id, $this->lastLogIndex, $this->lastLogIndex>0?$this->log[$this->lastLogIndex]->term:null, null, $this->commitIndex));
 				$this->Sender->BroadCastMessage($Message);
 				$this->heartbeat = array(); 
 				foreach ($this->NodeList->Nodes as $index => $iNode)
-					$this->heartbeat[$iNode->Id] = microtime(true) + $this->heartbeatinterval;
+					$this->heartbeat[$iNode->Id] = microtime(true);
 
 				$this->leader = microtime(true);
 			}
 			else if($this->state!="Leader" && microtime(true)>=$this->timeout)
 			{
-				//echo "ID ".$this->MyProperties->Id." $this->state Started Election \n";
+				echo "ID ".$this->MyProperties->Id." $this->state Started Election \n";
 				$this->state = "Candidate";
 				$this->currentTerm+=1;
-				$this->votes = 1;
+				$this->votes = 0;
 				$this->votedFor = $this->MyProperties->Id;
 				$Message = new Message("RequestVote", new RequestVote($this->currentTerm,$this->MyProperties->Id, $this->lastLogIndex, $this->lastLogIndex>0?$this->log[$this->lastLogIndex]->term:null));
 				$this->Sender->BroadCastMessage($Message);
@@ -448,6 +475,7 @@ class Node
 			}
 			else if($this->state == "Leader")
 			{
+				$ids = array();
 				for($i = max($this->matchIndex); $i>$this->commitIndex; $i-=1)
 				{
 					if( $this->log[$i]->term != $this->currentTerm)
@@ -455,10 +483,18 @@ class Node
 					$matchcount = 0;
 					foreach ($this->matchIndex as $key => $value) {
 						if( $value == $i)
+						{
 							$matchcount+=1;
+							$ids[$i] = true;
+						}
 					}
 					if($matchcount >= (int)((count($this->NodeList->Nodes)+1)/2))
 					{
+						echo "match count ";
+						foreach ($ids as $key => $value) {
+							echo $key;
+						}
+						echo "\n";
 						$this->commitIndex = $i;
 						break;
 					}
@@ -492,12 +528,20 @@ class Node
 
 	public function WriteLog()
 	{
-		$file = "log".$this->MyProperties->Id;
-		$content = "\n".$this->commitIndex." ".$this->lastApplied." ".$this->lastLogIndex." ".$this->MyProperties->Id."     ";
+		$debug = "\n".time()."\t".$this->commitIndex."\t".$this->lastLogIndex."\t".$this->MyProperties->Id."\t";
+		$content = "";
 		foreach ($this->log as $id => $index)
-			$content = $content.$index->command." ";
+			$content = $content.$index->command."\t";
 		$content = $content."\n";
-		echo($content);
+		$myFile = "Node ".$this->MyProperties->Id."/Debug.txt";
+		$fh = fopen($myFile, 'a');
+		fwrite($fh, $debug.$content);
+		fclose($fh);
+		$myFile = "Node ".$this->MyProperties->Id."/Latest.txt";
+		$fh = fopen($myFile, 'w');
+		fwrite($fh, $content);
+		fclose($fh);
+		echo($debug.$content);
 	}
 
 	public function NodeClose()
