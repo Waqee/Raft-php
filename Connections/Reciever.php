@@ -19,27 +19,23 @@ class Reciever
 		{
 			echo $Node->Id;
 			$this->servers[$Node->Id] = socket_create(AF_INET, SOCK_STREAM, 0) or die("Could not create socket\n");
-			socket_set_nonblock($this->servers[$Node->Id]);
 		}
 	}
 
-	public function TryConnections($MyProperties, $NodeList)
+	public function TryConnections($MyProperties, $NodeList, $connectIndex)
 	{
 		foreach($NodeList->Nodes as $Node)
 		{
-
-			if(!array_key_exists($Node->Id,$this->status))
+			if($connectIndex == $Node->Id)
 			{
-				if(socket_connect($this->servers[$Node->Id], $Node->ServerAddr, $Node->PortNo) == true)
-				{
-					$this->status[$Node->Id] = true;
-					socket_write($this->servers[$Node->Id], $MyProperties->Id, strlen ($MyProperties->Id) +1);
-					echo "$MyProperties->Id has connected to Server $Node->Id ".count($this->status)."\n";
-					$this->MessageBuffers[$Node->Id] = "";
-				}
-			}
+				socket_connect($this->servers[$Node->Id], $Node->ServerAddr, $Node->PortNo);
+				$this->status[$Node->Id] = true;
+				socket_write($this->servers[$Node->Id], $MyProperties->Id, strlen ($MyProperties->Id) +1);
+				echo "$MyProperties->Id has connected to Server $Node->Id ".count($this->status)."\n";
+				$this->MessageBuffers[$Node->Id] = "";
+				socket_set_nonblock($this->servers[$Node->Id]);
+			}	
 		}
-		return count($this->status);
 	}
 
 	public function TryRecieve()

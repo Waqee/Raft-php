@@ -13,7 +13,7 @@ class Sender
 		socket_bind($this->socket, $MyProperties->ServerAddr, $MyProperties->PortNo);
 		socket_listen($this->socket);
 		socket_set_nonblock($this->socket);
-
+		
 		$this->client = array();
 	}
 
@@ -21,7 +21,7 @@ class Sender
 	{
 		$time_pre = microtime(true);
 		$timer = (mt_rand(0,3)==0)?1/100:0;
-		while(microtime(true)-$time_pre<$timer)
+		while(count($this->clients)!=$no)
 		{
 			if(($newc = socket_accept($this->socket)) !== false)
 			{
@@ -31,7 +31,6 @@ class Sender
 			    $this->clients[$id] = $newc;
 			}
 		}
-		return count($this->clients);
 	}
 
 	public function SendMessage($id, $Message)

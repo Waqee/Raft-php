@@ -56,6 +56,8 @@ class Node
 
 	public $log_writer;
 
+	public $connectIndex;
+
 
     public function __construct($MyProperties, $NodeList)
     {
@@ -77,6 +79,7 @@ class Node
 		$this->heartbeatinterval = 0.075;
 		$this->LeaderId = null;
 		$this->close = false;
+		$this->connectIndex = 0;
 		set_time_limit(0);
 		$this->socket = socket_create(AF_INET, SOCK_STREAM, 0) or die("Could not create socket\n");
 		socket_bind($this->socket, $MyProperties->ServerAddr, $MyProperties->PortNo+count($NodeList->Nodes)+1);
@@ -98,14 +101,15 @@ class Node
 		$this->state = "Follower";
 		$x = 0;
 		$y = 0; 
-		while(count($this->NodeList->Nodes) != $x || count($this->NodeList->Nodes) != $y)
+		while($this->connectIndex<=count($this->NodeList->Nodes))
 		{
-			if(count($this->NodeList->Nodes) != $x)
-				$x = $this->Sender->AcceptConnection($this->MyProperties, count($this->NodeList->Nodes));
-
-			if(count($this->NodeList->Nodes) != $y)
-				$y = $this->Reciever->TryConnections($this->MyProperties, $this->NodeList);
+			if($this->MyProperties->Id == $this->connectIndex)
+				$this->Sender->AcceptConnection($this->MyProperties, count($this->NodeList->Nodes));
+			else
+				$this->Reciever->TryConnections($this->MyProperties, $this->NodeList, $this->connectIndex);
 			#echo $this->MyProperties->Id." ".$x." ".$y."\n";
+			$this->connectIndex += 1;
+			sleep(1);
 		}
 		echo "A";
 		$this->timeout = microtime(true) + $this->timeoutinterval + (mt_rand(0,150)/1000); 
