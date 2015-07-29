@@ -13,7 +13,6 @@ class Sender
 		socket_set_option($this->socket, SOL_SOCKET, SO_REUSEADDR, 1);
 		socket_bind($this->socket, $MyProperties->ServerAddr, $MyProperties->PortNo);
 		socket_listen($this->socket);
-		socket_set_nonblock($this->socket);
 
 		$this->client = array();
 	}
