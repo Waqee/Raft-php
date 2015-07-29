@@ -109,7 +109,6 @@ class Node
 				$this->Reciever->TryConnections($this->MyProperties, $this->NodeList, $this->connectIndex);
 			#echo $this->MyProperties->Id." ".$x." ".$y."\n";
 			$this->connectIndex += 1;
-			sleep(1);
 		}
 		echo "A";
 		$this->timeout = microtime(true) + $this->timeoutinterval + (mt_rand(0,150)/1000); 

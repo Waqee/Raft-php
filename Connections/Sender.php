@@ -9,28 +9,41 @@ class Sender
 	public function __construct($MyProperties)
 	{
 		set_time_limit(0);
-		$this->socket = socket_create(AF_INET, SOCK_STREAM, 0) or die("Could not create socket\n");
+		$this->socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP) or die("Could not create socket\n");
+		socket_set_option($this->socket, SOL_SOCKET, SO_REUSEADDR, 1);
 		socket_bind($this->socket, $MyProperties->ServerAddr, $MyProperties->PortNo);
 		socket_listen($this->socket);
 		socket_set_nonblock($this->socket);
-		
+
 		$this->client = array();
 	}
 
 	public function AcceptConnection($MyProperties, $no)
 	{
-		$time_pre = microtime(true);
-		$timer = (mt_rand(0,3)==0)?1/100:0;
-		while(count($this->clients)!=$no)
-		{
-			if(($newc = socket_accept($this->socket)) !== false)
-			{
-				echo "$MyProperties->Id B\n";
-				$id = socket_read ($newc, 2);
-			    echo "Client $id has connected to $MyProperties->Id\n";
-			    $this->clients[$id] = $newc;
-			}
-		}
+		
+		while (count($this->clients)!=$no) {
+	        // create a copy, so $clients doesn't get modified by socket_select()
+	        $read = array($this->socket);
+	       
+	        // get a list of all the clients that have data to be read from
+	        // if there are no clients with data, go to next iteration
+	        $ready=@socket_select($read, $write = NULL, $except = NULL,0);
+		    if ($ready=== false)
+		      die("Failed to listen for clients: ". socket_strerror(socket_last_error()));
+
+		    // a client request service
+		    elseif($ready>0){
+		       
+		            // accept the client, and add him to the $clients array
+		            $newc = socket_accept($this->socket);
+		           
+		            echo "$MyProperties->Id B\n";
+					$id = socket_read ($newc, 2);
+				    echo "Client $id has connected to $MyProperties->Id\n";
+				    $this->clients[$id] = $newc;
+		           
+	        }
+	    }
 	}
 
 	public function SendMessage($id, $Message)
