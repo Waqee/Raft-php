@@ -106,7 +106,10 @@ class Node
 			if($this->MyProperties->Id == $this->connectIndex)
 				$this->Sender->AcceptConnection($this->MyProperties, count($this->NodeList->Nodes));
 			else
+			{
+				sleep(1);
 				$this->Reciever->TryConnections($this->MyProperties, $this->NodeList, $this->connectIndex);
+			}
 			#echo $this->MyProperties->Id." ".$x." ".$y."\n";
 			$this->connectIndex += 1;
 		}
@@ -129,7 +132,11 @@ class Node
 			// echo "\n";
 
 			if($this->clientSocket==false)
-				$this->clientSocket = socket_accept($this->socket);
+			{
+				$read = array($this->socket);
+				if(socket_select($read,$write = NULL, $except = NULL, 0)>0)
+					$this->clientSocket = socket_accept($this->socket);
+			}
 			
 			if($this->clientSocket!=false)
 			{
