@@ -92,6 +92,7 @@ class Node
 	
 	public function NodeStart()
 	{
+		error_reporting(0);
 		mkdir("./Node ".$this->MyProperties->Id);
 		$myFile = "Node ".$this->MyProperties->Id."/Debug.txt";
 		$fh = fopen($myFile, 'w');
