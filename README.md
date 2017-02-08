@@ -1,7 +1,9 @@
 # Raft-php
 Implementation of Raft Consensus Algorithm in php
 
-Run basic test cases by naviagating to the download directory and running command
+Authors: Khawaja Waqee Khalid, Tahir Azim
+
+Run basic test cases by navigating to the download directory and running command
 
 php TestCases.php [port]
 
