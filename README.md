@@ -1,8 +1,10 @@
 # Raft-php
 Implementation of Raft Consensus Algorithm in php
 
-Authors: Khawaja Waqee Khalid, Tahir Azim
+Authors: 
 =======
+
+Khawaja Waqee Khalid, Tahir Azim
 
 Instructions:
 =============
